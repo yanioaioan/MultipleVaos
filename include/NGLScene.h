@@ -149,6 +149,9 @@ private:
     void buildVAO();
     void buildVAO2();
 
+
+    ngl::Vec3 verts[3];
+    std::vector <ngl::Vec3> normals;
 };
 
 

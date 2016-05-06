@@ -81,8 +81,8 @@ void NGLScene::initializeGL()
   // we are creating a shader called Phong
   shader->createShaderProgram("Phong");
   // now we are going to create empty shaders for Frag and Vert
-  shader->attachShader("PhongVertex",ngl::VERTEX);
-  shader->attachShader("PhongFragment",ngl::FRAGMENT);
+  shader->attachShader("PhongVertex",ngl::ShaderType::VERTEX);
+  shader->attachShader("PhongFragment",ngl::ShaderType::FRAGMENT);
   // attach the source
   shader->loadShaderSource("PhongVertex","shaders/PhongVertex.glsl");
   shader->loadShaderSource("PhongFragment","shaders/PhongFragment.glsl");
@@ -98,7 +98,7 @@ void NGLScene::initializeGL()
   // and make it active ready to load values
   (*shader)["Phong"]->use();
   // the shader will use the currently active material and light0 so set them
-  ngl::Material m(ngl::GOLD);
+  ngl::Material m(ngl::STDMAT::GOLD);
   // load our material values to the shader into the structure material (see Vertex shader)
   m.loadToShader("material");
   shader->setShaderParam3f("viewerPos",m_cam->getEye().m_x,m_cam->getEye().m_y,m_cam->getEye().m_z);
@@ -108,7 +108,7 @@ void NGLScene::initializeGL()
   ngl::Mat4 iv=m_cam->getViewMatrix();
   iv.transpose();
   iv=iv.inverse();
-  ngl::Light l(ngl::Vec3(0,1,0),ngl::Colour(1,1,1,1),ngl::Colour(1,1,1,1),ngl::POINTLIGHT);
+  ngl::Light l(ngl::Vec3(0,1,0),ngl::Colour(1,1,1,1),ngl::Colour(1,1,1,1),ngl::LightModes::POINTLIGHT);
   l.setTransform(iv);
   // load these values to the shader as well
   l.loadToShader("light");
@@ -117,17 +117,15 @@ void NGLScene::initializeGL()
   buildVAO2();
 
   glViewport(0,0,width(),height());
+
+  startTimer(2);
 }
 
 void NGLScene::buildVAO()
 {
-    ngl::Vec3 verts[]=
-    {
-        ngl::Vec3(-1.0f, -1.0f, 1.0f),//fbl 0
-        ngl::Vec3(1.0f, -1.0f, 1.0f),//fbr 1
-        ngl::Vec3(1.0f, -1.0f, -1.0f),//bbr 5
-     };
-     std::vector <ngl::Vec3> normals;
+    verts[0]=ngl::Vec3(-1.0f, -1.0f, 1.0f);//fbl 0
+    verts[1]=ngl::Vec3(1.0f, -1.0f, 1.0f);//fbr 1
+    verts[2]=ngl::Vec3(1.0f, -1.0f, -1.0f);//bbr 5
 
      //1st face normals-bottom
      ngl::Vec3 n=ngl::calcNormal(verts[1],verts[2],verts[0]);
@@ -224,7 +222,7 @@ void NGLScene::paintGL()
 
   ngl::ShaderLib *shader=ngl::ShaderLib::instance();
   (*shader)["Phong"]->use();
-  ngl::Material m(ngl::PEWTER);
+  ngl::Material m(ngl::STDMAT::PEWTER);
   // load our material values to the shader into the structure material (see Vertex shader)
   m.loadToShader("material");
 
@@ -255,7 +253,7 @@ void NGLScene::paintGL()
   m_transform.reset();
   {
       //    load our material values to the shader into the structure material (see Vertex shader)
-      m.set(ngl::BRONZE);
+      m.set(ngl::STDMAT::BRONZE);
       m.loadToShader("material");
 
       m_transform.setPosition(ngl::Vec3(0,2,0));
@@ -364,9 +362,28 @@ void NGLScene::wheelEvent(QWheelEvent *_event)
 //----------------------------------------------------------------------------------------------------------------------
 
 
-
+static double flow;
 void NGLScene::timerEvent( QTimerEvent *_event )
-{   
+{
+    //update 1st vbo vertices and normals and reload it to GPU
+    m_vao->bind();
+    //update vertices
+    verts[0].m_x+=sin(flow+=0.005)/100;
+    verts[1].m_y+=cos(flow+=0.002)/100;
+    verts[2].m_z+=cos(flow+=0.003)/100;
+    std::cout<<verts[0].m_x<<std::endl;
+
+    m_vao->updateData(sizeof(verts), verts[0].m_x );
+
+    //update normals
+    ngl::Vec3 n=ngl::calcNormal(verts[1],verts[2],verts[0]);
+    normals[0]=n;normals[1]=n;normals[2]=n;
+
+    m_vao->updateIndexedData(normals.size()*sizeof(ngl::Vec3), normals[0].m_x );
+
+    //update 2nd vbo vertices and normals and reload it to GPU
+
+
    update();
 }
 
